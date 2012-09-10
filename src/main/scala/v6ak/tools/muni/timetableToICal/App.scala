@@ -68,32 +68,58 @@ object App {
 			den\"radek"\"slot" foreach { slot =>
 				val fromTime = slot.attribute("odcas").get.toString
 				val toTime = slot.attribute("docas").get.toString
-				val place = (slot\"mistnost").text
+				val place = (slot\"mistnosti"\"mistnost"\"mistnostozn").text
 				val akce = slot\"akce"
 				val code = (akce\"kod").text
 				val name = (akce\"nazev").text
 				val fromMilis = date(day, fromTime)
 				val toMilis = date(day, toTime)
-				val event = new VEvent(new IDate(new JDate(fromMilis)), new Dur(new JDate(fromMilis), new JDate(toMilis)), code+"@"+place+": "+name)
-				List(
-					"DTSTAMP",
-					"DTSTART"
-				) foreach { name =>
-					event.getProperties.removeAll(event.getProperties(name))
+				var isNote = false
+				val dateFormat = new java.text.SimpleDateFormat("y-d-M H:mm")
+				val year = java.util.Calendar.getInstance.get(java.util.Calendar.YEAR).toString
+				slot\"poznamka" foreach { poznamka =>
+                                	val id = poznamka.attribute("id").get.toString
+					isNote = true
+					val note = (xml\"poznamky"\"poznamka" filter (x => (x \ "@id").text equals id)).text
+					val TimeRecord = """\p{Upper}\p{Lower} ([0-3]?\d)\. ([0-1]?\d)\. ([0-2]?\d:[0-6]\d)--([0-2]?\d:[0-6]\d)""".r
+					note split """,\s(?=\p{Upper}\p{Lower})""" foreach { chunk =>
+						val record = TimeRecord.findAllIn(chunk).matchData.toList(0)
+						val day = record.group(1)
+						val month = record.group(2)
+						val datePrefix = year + "-" + day + "-" + month + " "
+						val fromTimeMilis = dateFormat.parse(datePrefix + record.group(3)).getTime
+						val toTimeMilis = dateFormat.parse(datePrefix + record.group(4)).getTime
+						val newEvent = createEvent(fromTimeMilis.toLong, toTimeMilis.toLong, code+"@"+place+": "+name, place)
+                                		calendar.getComponents.add(newEvent)
+					}
 				}
-				List(
-					new MyComponent("DTSTAMP;TZID=Europe/Prague", new IDateTime(fromMilis).toString+"Z"),
-					new MyComponent("DTSTART;TZID=Europe/Prague", new IDateTime(fromMilis).toString+"Z"),
-					new RRule(new Recur(Recur.WEEKLY, until))
-				) foreach {
-					event.getProperties.add(_)
+				if (!isNote) {
+					val event = createEvent(fromMilis, toMilis, code+"@"+place+": "+name, place)
+					event.getProperties.add(new RRule(new Recur(Recur.WEEKLY, until)))
+					calendar.getComponents.add(event)
 				}
-				calendar.getComponents.add(event)
 			}
 		}
 		for(out <- managed(new FileWriter(to))){
 			out write calendar.toString
 		}
+	}
+	def createEvent(fromMilis : Long, toMilis : Long, summary : String, location : String) = { 
+		val event = new VEvent(new IDate(new JDate(fromMilis)), new Dur(new JDate(fromMilis), new JDate(toMilis)), summary)
+		List(
+			"DTSTAMP",
+			"DTSTART"
+		) foreach { name =>
+			event.getProperties.removeAll(event.getProperties(name))
+		}
+		List(
+			new MyComponent("DTSTAMP;TZID=Europe/Prague", new IDateTime(fromMilis).toString+"Z"),
+			new MyComponent("DTSTART;TZID=Europe/Prague", new IDateTime(fromMilis).toString+"Z"),
+			new Location(location)
+		) foreach {
+			event.getProperties.add(_)
+		}
+		event
 	}
 
 }
