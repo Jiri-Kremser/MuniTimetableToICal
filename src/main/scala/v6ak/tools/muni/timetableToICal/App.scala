@@ -19,6 +19,7 @@ class MyComponent(name:String, var value:String) extends IProperty(name){ // Chr
 
 /**
  * @author Vít Šesták 'v6ak'
+ * @author Jiri Kremser
  */
 object App {
 
@@ -42,7 +43,7 @@ object App {
 	def main(args : Array[String]) {
 		if(args.length != 3){
 			err println "usage: <appLauncher> sourceXmlFile targetIcsFile dateTo"
-			err println "dateTo: YYYY-MM-DD"
+			err println "dateTo (most likely the end of term): YYYY-MM-DD"
 			System exit 1
 		}
 
